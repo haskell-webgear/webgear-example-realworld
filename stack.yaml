@@ -1,6 +1,5 @@
 resolver: lts-17.15
 
-packages:
-  - ./webgear-server
-  - ./webgear-examples
-  - ./webgear-benchmarks
+extra-deps:
+  - https://github.com/haskell-webgear/webgear-server/archive/b7525446c36df35803ab96ce2fb37284956adc32.zip
+

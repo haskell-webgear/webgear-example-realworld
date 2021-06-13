@@ -1,2 +1,5 @@
-realworld.db-shm
-realworld.db-wal
+.stack-work/
+.hie/
+dist-newstyle/
+cabal.project.freeze
+*~
