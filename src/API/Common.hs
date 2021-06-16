@@ -13,7 +13,6 @@ module API.Common where
 
 import Control.Exception.Safe (MonadCatch, MonadThrow)
 import Control.Lens (view)
-import Control.Monad.Except (MonadError)
 import Control.Monad.Time (MonadTime (..))
 import qualified Crypto.JWT as JWT
 import Data.Aeson
@@ -35,14 +34,17 @@ data AppEnv = AppEnv
   }
 
 newtype App a = App { unApp :: ReaderT AppEnv Router a }
-  deriving newtype ( Functor, Applicative, Alternative, Monad, MonadPlus, MonadThrow, MonadCatch
-                   , MonadReader AppEnv, MonadError RouteError, MonadState PathInfo, MonadIO)
-
-instance MonadRouter App where
-  rejectRoute = App $ lift rejectRoute
-  errorResponse = App . lift . errorResponse
-  catchErrorResponse (App (ReaderT action)) handler = App $ ReaderT $ \r ->
-    catchErrorResponse (action r) (flip runReaderT r . unApp . handler)
+  deriving newtype ( Functor
+                   , Applicative
+                   , Alternative
+                   , Monad
+                   , MonadThrow
+                   , MonadCatch
+                   , MonadReader AppEnv
+                   , MonadState PathInfo
+                   , MonadIO
+                   , MonadRouter
+                   )
 
 instance MonadTime App where
   currentTime = liftIO currentTime
@@ -69,14 +71,14 @@ runDBAction action = do
 type RequiredAuth = JWTAuth' Required "token" App () (Key User)
 type OptionalAuth = JWTAuth' Optional "token" App () (Key User)
 
-requiredTokenAuth :: RequestMiddleware' App req (RequiredAuth : req) a
+requiredTokenAuth :: RequestMiddleware App req (RequiredAuth : req) a
 requiredTokenAuth = tokenAuth jwtAuth'
 
-optionalTokenAuth :: RequestMiddleware' App req (OptionalAuth : req) a
+optionalTokenAuth :: RequestMiddleware App req (OptionalAuth : req) a
 optionalTokenAuth = tokenAuth optionalJWTAuth'
 
-tokenAuth :: (JWTAuthConfig App () (Key User) -> RequestMiddleware' App req (r:req) a)
-          -> RequestMiddleware' App req (r:req) a
+tokenAuth :: (JWTAuthConfig App () (Key User) -> RequestMiddleware App req (r:req) a)
+          -> RequestMiddleware App req (r:req) a
 tokenAuth auth handler = Kleisli $ \request -> do
   jwk <- askJWK
   let handler' = auth JWTAuthConfig{jwkSet = JWT.JWKSet [jwk], ..} handler

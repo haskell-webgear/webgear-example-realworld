@@ -1,5 +1,4 @@
 resolver: lts-17.15
 
 extra-deps:
-  - https://github.com/haskell-webgear/webgear-server/archive/b7525446c36df35803ab96ce2fb37284956adc32.zip
-
+  - https://github.com/haskell-webgear/webgear-server/archive/837108dd828153cf43adb94eb75818d229c87eb2.zip

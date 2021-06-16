@@ -11,7 +11,7 @@ import Relude
 import WebGear
 
 
-list :: Handler' App req LByteString
+list :: Handler App req LByteString
 list = jsonResponseBody @(Wrapped "tags" [Text]) handler
   where
     handler = Kleisli $ \_request -> do

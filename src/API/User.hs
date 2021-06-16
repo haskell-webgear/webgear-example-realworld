@@ -23,7 +23,7 @@ import WebGear
 type CreateUserRequest = Wrapped "user" Model.CreateUserPayload
 type UserResponse = Wrapped "user" Model.UserRecord
 
-create :: Handler' App req LByteString
+create :: Handler App req LByteString
 create = jsonRequestBody @CreateUserRequest
          $ jsonResponseBody @UserResponse
          $ handler
@@ -46,7 +46,7 @@ handleDBError e | DB.seError e == DB.ErrorConstraint = errorResponse $ badReques
 
 type LoginUserRequest = Wrapped "user" Model.LoginUserPayload
 
-login :: Handler' App req LByteString
+login :: Handler App req LByteString
 login = jsonRequestBody @LoginUserRequest
         $ jsonResponseBody @UserResponse
         $ handler
@@ -62,12 +62,12 @@ login = jsonRequestBody @LoginUserRequest
 
 --------------------------------------------------------------------------------
 
-current :: Handler' App req LByteString
+current :: Handler App req LByteString
 current = requiredTokenAuth
           $ jsonResponseBody @UserResponse
           $ handler
   where
-    handler :: HasTrait RequiredAuth req => Handler' App req UserResponse
+    handler :: HasTrait RequiredAuth req => Handler App req UserResponse
     handler = Kleisli $ \request -> do
       let userId = pick @RequiredAuth $ from request
       jwk <- askJWK
@@ -79,13 +79,13 @@ current = requiredTokenAuth
 
 type UpdateUserRequest = Wrapped "user" Model.UpdateUserPayload
 
-update :: Handler' App req LByteString
+update :: Handler App req LByteString
 update = requiredTokenAuth
          $ jsonRequestBody @UpdateUserRequest
          $ jsonResponseBody @UserResponse
          $ handler
   where
-    handler :: HaveTraits [RequiredAuth, JSONBody UpdateUserRequest] req => Handler' App req UserResponse
+    handler :: HaveTraits [RequiredAuth, JSONBody UpdateUserRequest] req => Handler App req UserResponse
     handler = Kleisli $ \request -> do
       let userId = pick @RequiredAuth $ from request
           userPayload = pick @(JSONBody UpdateUserRequest) $ from request

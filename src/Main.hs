@@ -28,7 +28,7 @@ import WebGear
 -- A medium.com clone app specified by https://github.com/gothinkster/realworld
 --------------------------------------------------------------------------------
 
-allRoutes :: Handler' App '[] LByteString
+allRoutes :: Handler App '[] LByteString
 allRoutes =
       [route| POST    /api/users                                       |] User.create
   <|> [route| POST    /api/users/login                                 |] User.login
@@ -55,10 +55,10 @@ allRoutes =
   <|> [match| GET     /ui        |] serveIndex
   <|> [route| GET     /          |] serveIndex
 
-serveUIAssets :: Handler' App req LByteString
+serveUIAssets :: Handler App req LByteString
 serveUIAssets = serveDir "ui/assets" Nothing
 
-serveIndex :: Handler' App req LByteString
+serveIndex :: Handler App req LByteString
 serveIndex = Kleisli $ const $ serveFile "ui/index.html"
 
 application :: Pool SqlBackend -> JWT.JWK -> Wai.Application

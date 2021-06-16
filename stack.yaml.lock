@@ -5,16 +5,16 @@
 
 packages:
 - completed:
-    size: 55180
-    url: https://github.com/haskell-webgear/webgear-server/archive/b7525446c36df35803ab96ce2fb37284956adc32.zip
+    size: 55438
+    url: https://github.com/haskell-webgear/webgear-server/archive/837108dd828153cf43adb94eb75818d229c87eb2.zip
     name: webgear-server
     version: 0.2.1
-    sha256: 7d24df45c90cf349f5b5d5c155d934d6370083e5513b8383b6d3ca604c9f5d2a
+    sha256: a7cf40eaf2aea28f23f1dc05f1828aef764d5636a5169b862281db05447f3e09
     pantry-tree:
       size: 2706
-      sha256: 8126ec9c457eb48384bef10128dee84a1a45369b79215c4c5fa6e4b55f3772d5
+      sha256: aaec45a99c38ca4febadf9a92c178df04a3b85c31b97bfaa1bf6356e82bb59a0
   original:
-    url: https://github.com/haskell-webgear/webgear-server/archive/b7525446c36df35803ab96ce2fb37284956adc32.zip
+    url: https://github.com/haskell-webgear/webgear-server/archive/837108dd828153cf43adb94eb75818d229c87eb2.zip
 snapshots:
 - completed:
     size: 567679

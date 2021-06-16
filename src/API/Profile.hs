@@ -15,7 +15,7 @@ import WebGear
 
 type ProfileResponse = Wrapped "profile" Model.Profile
 
-getByName :: HasTrait (PathVar "username" Text) req => Handler' App req LByteString
+getByName :: HasTrait (PathVar "username" Text) req => Handler App req LByteString
 getByName = optionalTokenAuth
             $ jsonResponseBody @ProfileResponse
             $ handler
@@ -26,7 +26,7 @@ getByName = optionalTokenAuth
       maybeProfile <- runDBAction $ Model.getByName maybeCurrentUserId username
       pure $ maybe notFound404 (ok200 . Wrapped) maybeProfile
 
-follow :: HasTrait (PathVar "username" Text) req => Handler' App req LByteString
+follow :: HasTrait (PathVar "username" Text) req => Handler App req LByteString
 follow = requiredTokenAuth
          $ jsonResponseBody @ProfileResponse
          $ handler
@@ -38,7 +38,7 @@ follow = requiredTokenAuth
       pure $ maybe notFound404 (ok200 . Wrapped) maybeProfile
 
 
-unfollow :: HasTrait (PathVar "username" Text) req => Handler' App req LByteString
+unfollow :: HasTrait (PathVar "username" Text) req => Handler App req LByteString
 unfollow = requiredTokenAuth
            $ jsonResponseBody @ProfileResponse
            $ handler

@@ -30,7 +30,7 @@ import WebGear hiding (length)
 type CreateArticleRequest = Wrapped "article" Model.CreateArticlePayload
 type ArticleResponse = Wrapped "article" Model.ArticleRecord
 
-create :: Handler' App req LByteString
+create :: Handler App req LByteString
 create = requiredTokenAuth
          $ jsonRequestBody @CreateArticleRequest
          $ jsonResponseBody @ArticleResponse
@@ -51,7 +51,7 @@ handleDBError e | DB.seError e == DB.ErrorConstraint = errorResponse $ badReques
 
 --------------------------------------------------------------------------------
 
-getBySlug :: HasTrait (PathVar "slug" Text) req => Handler' App req LByteString
+getBySlug :: HasTrait (PathVar "slug" Text) req => Handler App req LByteString
 getBySlug = optionalTokenAuth
             $ jsonResponseBody @ArticleResponse
             $ handler
@@ -67,7 +67,7 @@ getBySlug = optionalTokenAuth
 
 type UpdateArticleRequest = Wrapped "article" Model.UpdateArticlePayload
 
-update :: HasTrait (PathVar "slug" Text) req => Handler' App req LByteString
+update :: HasTrait (PathVar "slug" Text) req => Handler App req LByteString
 update = requiredTokenAuth
          $ jsonRequestBody @UpdateArticleRequest
          $ jsonResponseBody @ArticleResponse
@@ -91,7 +91,7 @@ update = requiredTokenAuth
 
 --------------------------------------------------------------------------------
 
-delete :: HasTrait (PathVar "slug" Text) req => Handler' App req LByteString
+delete :: HasTrait (PathVar "slug" Text) req => Handler App req LByteString
 delete = requiredTokenAuth handler
   where
     handler = Kleisli $ \request -> do
@@ -109,7 +109,7 @@ data ArticleListResponse = ArticleListResponse
   }
   deriving (Generic, ToJSON)
 
-list :: Handler' App req LByteString
+list :: Handler App req LByteString
 list = optionalTokenAuth
        $ optionalQueryParam @"tag" @Text
        $ optionalQueryParam @"author" @Text
@@ -133,7 +133,7 @@ list = optionalTokenAuth
 
 --------------------------------------------------------------------------------
 
-feed :: Handler' App req LByteString
+feed :: Handler App req LByteString
 feed = requiredTokenAuth
        $ optionalQueryParam @"limit" @Int64
        $ optionalQueryParam @"offset" @Int64
@@ -151,7 +151,7 @@ feed = requiredTokenAuth
 
 --------------------------------------------------------------------------------
 
-favorite :: HasTrait (PathVar "slug" Text) req => Handler' App req LByteString
+favorite :: HasTrait (PathVar "slug" Text) req => Handler App req LByteString
 favorite = requiredTokenAuth
            $ jsonResponseBody @ArticleResponse
            $ handler
@@ -165,7 +165,7 @@ favorite = requiredTokenAuth
 
 --------------------------------------------------------------------------------
 
-unfavorite :: HasTrait (PathVar "slug" Text) req => Handler' App req LByteString
+unfavorite :: HasTrait (PathVar "slug" Text) req => Handler App req LByteString
 unfavorite = requiredTokenAuth
              $ jsonResponseBody @ArticleResponse
              $ handler

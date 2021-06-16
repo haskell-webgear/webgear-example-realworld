@@ -17,7 +17,7 @@ import WebGear
 type CreateCommentRequest = Wrapped "comment" Model.CreateCommentPayload
 type CommentResponse = Wrapped "comment" Model.CommentRecord
 
-create :: HasTrait (PathVar "slug" Text) req => Handler' App req LByteString
+create :: HasTrait (PathVar "slug" Text) req => Handler App req LByteString
 create = requiredTokenAuth
          $ jsonRequestBody @CreateCommentRequest
          $ jsonResponseBody @CommentResponse
@@ -35,7 +35,7 @@ create = requiredTokenAuth
 
 type CommentListResponse = Wrapped "comments" [Model.CommentRecord]
 
-list :: HasTrait (PathVar "slug" Text) req => Handler' App req LByteString
+list :: HasTrait (PathVar "slug" Text) req => Handler App req LByteString
 list = optionalTokenAuth
        $ jsonResponseBody @CommentListResponse
        $ handler
@@ -50,7 +50,7 @@ list = optionalTokenAuth
 --------------------------------------------------------------------------------
 
 delete :: HaveTraits [PathVar "slug" Text, PathVar "commentId" Int64] req
-       => Handler' App req LByteString
+       => Handler App req LByteString
 delete = requiredTokenAuth handler
   where
     handler = Kleisli $ \request -> do
