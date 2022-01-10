@@ -1,17 +1,22 @@
-module Model.Tag
-  ( list
-  ) where
+module Model.Tag (
+  list,
+) where
 
-import Database.Esqueleto
-import Model.Common
+import Database.Esqueleto.Experimental
+import Model.Common (DBAction)
 import Model.Entities
-import Relude
-
+import Relude hiding (on)
 
 list :: DBAction [Text]
-list = fmap unValue <$>
-  -- select only tags used in articles
-  (select $ from $
-   \(tag, articleTag) -> do
-     where_ (tag ^. TagId ==. articleTag ^. ArticleTagTagid)
-     pure $ tag ^. TagName)
+list =
+  fmap unValue
+    <$>
+    -- select only tags used in articles
+    ( select $ do
+        (tag :& _articleTag) <-
+          from $
+            table @Tag
+              `innerJoin` table @ArticleTag
+              `on` (\(tag :& articleTag) -> tag ^. TagId ==. articleTag ^. ArticleTagTagid)
+        pure $ tag ^. TagName
+    )

@@ -1,8 +1,5 @@
-{-# LANGUAGE DataKinds         #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE QuasiQuotes       #-}
-{-# LANGUAGE RankNTypes        #-}
-{-# LANGUAGE TypeApplications  #-}
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
+
 module Main where
 
 import qualified API.Article as Article
@@ -10,62 +7,72 @@ import qualified API.Comment as Comment
 import API.Common (App (..), AppEnv (..))
 import qualified API.Profile as Profile
 import qualified API.Tag as Tag
+import qualified API.UI as UI
 import qualified API.User as User
+import Control.Category ((.))
 import qualified Crypto.JWT as JWT
 import Data.Aeson (eitherDecode)
 import qualified Data.ByteString.Lazy as LBS
+import Data.OpenApi (OpenApi)
 import Data.Pool (Pool)
 import Database.Persist.Sql (SqlBackend)
 import Model.Common (withDBConnectionPool)
 import Network.HTTP.Types (StdMethod (..))
+import qualified Network.HTTP.Types as HTTP
 import qualified Network.Wai as Wai
 import qualified Network.Wai.Handler.Warp as Warp
-import Relude
-import WebGear
-
+import Relude hiding ((.))
+import WebGear.OpenApi (OpenApiHandler, toOpenApi)
+import WebGear.Server
 
 --------------------------------------------------------------------------------
 -- A medium.com clone app specified by https://github.com/gothinkster/realworld
 --------------------------------------------------------------------------------
 
-allRoutes :: Handler App '[] LByteString
-allRoutes =
-      [route| POST    /api/users                                       |] User.create
-  <|> [route| POST    /api/users/login                                 |] User.login
-  <|> [route| GET     /api/user                                        |] User.current
-  <|> [route| PUT     /api/user                                        |] User.update
-  <|> [route| GET     /api/profiles/username:Text                      |] Profile.getByName
-  <|> [route| POST    /api/profiles/username:Text/follow               |] Profile.follow
-  <|> [route| DELETE  /api/profiles/username:Text/follow               |] Profile.unfollow
-  <|> [route| POST    /api/articles                                    |] Article.create
-  <|> [route| GET     /api/articles                                    |] Article.list
-  <|> [route| GET     /api/articles/feed                               |] Article.feed
-  <|> [route| GET     /api/articles/slug:Text                          |] Article.getBySlug
-  <|> [route| PUT     /api/articles/slug:Text                          |] Article.update
-  <|> [route| DELETE  /api/articles/slug:Text                          |] Article.delete
-  <|> [route| POST    /api/articles/slug:Text/favorite                 |] Article.favorite
-  <|> [route| DELETE  /api/articles/slug:Text/favorite                 |] Article.unfavorite
-  <|> [route| POST    /api/articles/slug:Text/comments                 |] Comment.create
-  <|> [route| GET     /api/articles/slug:Text/comments                 |] Comment.list
-  <|> [route| DELETE  /api/articles/slug:Text/comments/commentId:Int64 |] Comment.delete
-  <|> [route| GET     /api/tags                                        |] Tag.list
-
-      -- UI resources
-  <|> [match| GET     /ui/assets |] serveUIAssets
-  <|> [match| GET     /ui        |] serveIndex
-  <|> [route| GET     /          |] serveIndex
-
-serveUIAssets :: Handler App req LByteString
-serveUIAssets = serveDir "ui/assets" Nothing
-
-serveIndex :: Handler App req LByteString
-serveIndex = Kleisli $ const $ serveFile "ui/index.html"
+appRoutes jwk =
+  [route|       POST    /api/users                                       |] (User.create jwk)
+    <+> [route| POST    /api/users/login                                 |] (User.login jwk)
+    <+> [route| GET     /api/user                                        |] (User.current jwk)
+    <+> [route| PUT     /api/user                                        |] (User.update jwk)
+    <+> [route| GET     /api/profiles/username:Text                      |] (Profile.getByName jwk)
+    <+> [route| POST    /api/profiles/username:Text/follow               |] (Profile.follow jwk)
+    <+> [route| DELETE  /api/profiles/username:Text/follow               |] (Profile.unfollow jwk)
+    <+> [route| POST    /api/articles                                    |] (Article.create jwk)
+    <+> [route| GET     /api/articles                                    |] (Article.list jwk)
+    <+> [route| GET     /api/articles/feed                               |] (Article.feed jwk)
+    <+> [route| GET     /api/articles/slug:Text                          |] (Article.getBySlug jwk)
+    <+> [route| PUT     /api/articles/slug:Text                          |] (Article.update jwk)
+    <+> [route| DELETE  /api/articles/slug:Text                          |] (Article.delete jwk)
+    <+> [route| POST    /api/articles/slug:Text/favorite                 |] (Article.favorite jwk)
+    <+> [route| DELETE  /api/articles/slug:Text/favorite                 |] (Article.unfavorite jwk)
+    <+> [route| POST    /api/articles/slug:Text/comments                 |] (Comment.create jwk)
+    <+> [route| GET     /api/articles/slug:Text/comments                 |] (Comment.list jwk)
+    <+> [route| DELETE  /api/articles/slug:Text/comments/commentId:Int64 |] (Comment.delete jwk)
+    <+> [route| GET     /api/tags                                        |] Tag.list
 
 application :: Pool SqlBackend -> JWT.JWK -> Wai.Application
-application pool jwk = toApplication $ transform appToRouter allRoutes
+application pool jwk = toApplication $ transform appToIO allRoutes
   where
-    appToRouter :: App a -> Router a
-    appToRouter = flip runReaderT (AppEnv pool jwk) . unApp
+    allRoutes =
+      appRoutes jwk
+        <+> uiRoutes
+        <+> [route| GET /openapi |] (genOpenApi $ appRoutes jwk)
+
+    uiRoutes =
+      [match|       GET  /ui/assets |] UI.assets
+        <+> [match| GET  /ui        |] UI.index
+        <+> [route| GET  /          |] UI.index
+
+    appToIO :: App a -> IO a
+    appToIO = flip runReaderT (AppEnv pool) . unApp
+
+genOpenApi ::
+  StdHandler h App '[] '[RequiredHeader "Content-Type" Text, JSONBody OpenApi] =>
+  RequestHandler (OpenApiHandler App) '[] ->
+  RequestHandler h req
+genOpenApi routes = proc _ -> do
+  let doc = toOpenApi routes
+  unlinkA . respondJsonA HTTP.ok200 -< doc
 
 main :: IO ()
 main = withDBConnectionPool $ \pool -> do

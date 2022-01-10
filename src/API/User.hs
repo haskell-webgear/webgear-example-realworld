@@ -1,96 +1,113 @@
-{-# LANGUAGE DataKinds             #-}
-{-# LANGUAGE DuplicateRecordFields #-}
-{-# LANGUAGE FlexibleContexts      #-}
-{-# LANGUAGE OverloadedStrings     #-}
-{-# LANGUAGE RankNTypes            #-}
-{-# LANGUAGE TypeApplications      #-}
-{-# LANGUAGE TypeFamilies          #-}
-module API.User
-  ( create
-  , login
-  , current
-  , update
-  ) where
+module API.User (
+  create,
+  login,
+  current,
+  update,
+) where
 
 import API.Common
-import Control.Exception.Safe (catch)
+import Control.Category ((.))
+import Control.Exception.Safe (try)
+import qualified Crypto.JWT as JWT
 import qualified Database.Sqlite as DB
 import qualified Model.User as Model
-import Relude
-import WebGear
-
+import qualified Network.HTTP.Types as HTTP
+import Relude hiding ((.))
+import WebGear.Server
 
 type CreateUserRequest = Wrapped "user" Model.CreateUserPayload
 type UserResponse = Wrapped "user" Model.UserRecord
 
-create :: Handler App req LByteString
-create = jsonRequestBody @CreateUserRequest
-         $ jsonResponseBody @UserResponse
-         $ handler
+create ::
+  StdHandler h App '[JSONBody CreateUserRequest] [RequiredHeader "Content-Type" Text, JSONBody UserResponse, JSONBody ErrorResponse] =>
+  JWT.JWK ->
+  RequestHandler h req
+create jwk =
+  withDoc "Create new user" "Create a new user in the store" $
+    jsonRequestBody @CreateUserRequest badRequestBody $
+      proc request -> do
+        result <- createInDB -< request
+        case result of
+          Left e -> handleDBError -< e
+          Right user -> unlinkA . setDescription okDescription . respondJsonA @UserResponse HTTP.ok200 -< Wrapped user
   where
-    handler = Kleisli $ \request -> do
+    createInDB = arrM $ \request -> do
       let userPayload = pick @(JSONBody CreateUserRequest) $ from request
-      jwk <- askJWK
-      let doCreate = do
-            user <- runDBAction $ Model.create jwk (unwrap userPayload)
-            pure $ ok200 $ Wrapped user
-      doCreate `catch` handleDBError
+      try $ runDBAction $ Model.create jwk (unwrap userPayload)
 
-handleDBError :: DB.SqliteException -> App (Response a)
-handleDBError e | DB.seError e == DB.ErrorConstraint = errorResponse $ badRequest400 "Another user account exists with these values"
-                | otherwise = errorResponse $ internalServerError500 $ fromString $ show e
-
-
+handleDBError ::
+  StdHandler h App '[] [RequiredHeader "Content-Type" Text, JSONBody ErrorResponse] =>
+  h DB.SqliteException Response
+handleDBError = proc e ->
+  if DB.seError e == DB.ErrorConstraint
+    then
+      unlinkA
+        . setDescription (dupDescription "user account")
+        . respondJsonA @ErrorResponse HTTP.badRequest400
+        -<
+          "Another user account exists with these values"
+    else unlinkA . respondJsonA @ErrorResponse HTTP.internalServerError500 -< show e
 
 --------------------------------------------------------------------------------
 
 type LoginUserRequest = Wrapped "user" Model.LoginUserPayload
 
-login :: Handler App req LByteString
-login = jsonRequestBody @LoginUserRequest
-        $ jsonResponseBody @UserResponse
-        $ handler
+login ::
+  StdHandler h App '[JSONBody LoginUserRequest] [RequiredHeader "Content-Type" Text, JSONBody UserResponse, JSONBody ErrorResponse] =>
+  JWT.JWK ->
+  RequestHandler h req
+login jwk =
+  withDoc "Authenticate a user" "Authenticate a user and return their record" $
+    jsonRequestBody @LoginUserRequest badRequestBody $
+      proc request -> do
+        result <- checkCreds -< request
+        case result of
+          Nothing -> unlinkA . setDescription resp403Description . respondJsonA @ErrorResponse HTTP.forbidden403 -< "Invalid credentials"
+          Just user -> unlinkA . setDescription okDescription . respondJsonA @UserResponse HTTP.ok200 -< Wrapped user
   where
-    handler = Kleisli $ \request -> do
+    checkCreds = arrM $ \request -> do
       let loginPayload = pick @(JSONBody LoginUserRequest) $ from request
-      jwk <- askJWK
-      maybeUser <- runDBAction $ Model.checkCredentials jwk (unwrap loginPayload)
-      maybe forbidden (pure . ok200 . Wrapped) maybeUser
-
-    forbidden = errorResponse $ forbidden403 "Invalid credentials"
-
+      runDBAction $ Model.checkCredentials jwk (unwrap loginPayload)
 
 --------------------------------------------------------------------------------
 
-current :: Handler App req LByteString
-current = requiredTokenAuth
-          $ jsonResponseBody @UserResponse
-          $ handler
+current ::
+  StdHandler h App '[RequiredAuth] [RequiredHeader "Content-Type" Text, JSONBody UserResponse, JSONBody ErrorResponse] =>
+  JWT.JWK ->
+  RequestHandler h req
+current jwk =
+  withDoc "Get current user" "Returns the record of authenticated user" $
+    requiredTokenAuth jwk $
+      proc request -> do
+        result <- getAuthUser -< request
+        case result of
+          Nothing -> unlinkA . setDescription (resp404Description "User") . notFound404 -< ()
+          Just user -> unlinkA . setDescription okDescription . respondJsonA @UserResponse HTTP.ok200 -< Wrapped user
   where
-    handler :: HasTrait RequiredAuth req => Handler App req UserResponse
-    handler = Kleisli $ \request -> do
+    getAuthUser = arrM $ \request -> do
       let userId = pick @RequiredAuth $ from request
-      jwk <- askJWK
-      maybeUser <- runDBAction $ Model.getByKey jwk userId
-      pure $ maybe notFound404 (ok200 . Wrapped) maybeUser
-
+      runDBAction $ Model.getByKey jwk userId
 
 --------------------------------------------------------------------------------
 
 type UpdateUserRequest = Wrapped "user" Model.UpdateUserPayload
 
-update :: Handler App req LByteString
-update = requiredTokenAuth
-         $ jsonRequestBody @UpdateUserRequest
-         $ jsonResponseBody @UserResponse
-         $ handler
+update ::
+  StdHandler h App [RequiredAuth, JSONBody UpdateUserRequest] [RequiredHeader "Content-Type" Text, JSONBody UserResponse, JSONBody ErrorResponse] =>
+  JWT.JWK ->
+  RequestHandler h req
+update jwk =
+  withDoc "Update current user" "Update the authenticated user" $
+    requiredTokenAuth jwk $
+      jsonRequestBody @UpdateUserRequest badRequestBody $
+        proc request -> do
+          result <- updateUser -< request
+          case result of
+            Left e -> handleDBError -< e
+            Right Nothing -> unlinkA . setDescription (resp404Description "User") . notFound404 -< ()
+            Right (Just user) -> unlinkA . setDescription okDescription . respondJsonA @UserResponse HTTP.ok200 -< Wrapped user
   where
-    handler :: HaveTraits [RequiredAuth, JSONBody UpdateUserRequest] req => Handler App req UserResponse
-    handler = Kleisli $ \request -> do
+    updateUser = arrM $ \request -> do
       let userId = pick @RequiredAuth $ from request
           userPayload = pick @(JSONBody UpdateUserRequest) $ from request
-      jwk <- askJWK
-      let doUpdate = do
-            maybeUser <- runDBAction $ Model.update jwk userId (unwrap userPayload)
-            pure $ maybe notFound404 (ok200 . Wrapped) maybeUser
-      doUpdate `catch` handleDBError
+      try $ runDBAction $ Model.update jwk userId (unwrap userPayload)

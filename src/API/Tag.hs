@@ -1,19 +1,29 @@
-{-# LANGUAGE DataKinds        #-}
-{-# LANGUAGE TypeApplications #-}
-module API.Tag
-  ( list
-  ) where
-
+module API.Tag (
+  list,
+) where
 
 import API.Common
+import Control.Category ((.))
 import qualified Model.Tag as Model
-import Relude
-import WebGear
+import qualified Network.HTTP.Types as HTTP
+import Relude hiding ((.))
+import WebGear.Server
 
+type TagsResponse = Wrapped "tags" [Text]
 
-list :: Handler App req LByteString
-list = jsonResponseBody @(Wrapped "tags" [Text]) handler
+list ::
+  StdHandler
+    h
+    App
+    '[]
+    [ RequiredHeader "Content-Type" Text
+    , JSONBody TagsResponse
+    ] =>
+  RequestHandler h req
+list =
+  withDoc "Get all tags" "" $
+    proc _request -> do
+      tags <- fetchTags -< ()
+      unlinkA . setDescription okDescription . respondJsonA @TagsResponse HTTP.ok200 -< Wrapped tags
   where
-    handler = Kleisli $ \_request -> do
-      tags <- runDBAction Model.list
-      pure $ ok200 $ Wrapped tags
+    fetchTags = arrM $ const $ runDBAction Model.list
