@@ -17,7 +17,7 @@ jobs:
           - ubuntu-latest
           - macos-latest
         ghc:
-          - 8.10.4
+          - 8.10.7
 
     steps:
       - uses: actions/checkout@v2
@@ -39,7 +39,7 @@ jobs:
         run: |
           # Workaround for random errors on macos
           rm -rf ~/.stack/setup-exe-src ~/.stack/setup-exe-cache
-          stack build --system-ghc --test --bench --no-run-tests --no-run-benchmarks
+          stack build --system-ghc --test --no-run-tests
 
       - name: Test
         run: stack test --system-ghc

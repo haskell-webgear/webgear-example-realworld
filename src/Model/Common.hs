@@ -1,22 +1,15 @@
-{-# LANGUAGE CPP               #-}
-{-# LANGUAGE OverloadedStrings #-}
 module Model.Common where
 
 import Control.Monad.Logger (runStdoutLoggingT)
-import Data.Aeson (Options (..), defaultOptions)
+import qualified Data.Aeson as Aeson
 import Data.Char (isLower, isUpper, toLower)
+import qualified Data.OpenApi as OpenApi
 import Data.Pool (Pool, withResource)
-import Database.Esqueleto
+import Database.Esqueleto.Experimental
+import Database.Esqueleto.Internal.Internal (Update)
 import Database.Persist.Sqlite (withSqlitePool)
 import Model.Entities (migrateAll)
 import Relude
-
-#if MIN_VERSION_esqueleto(3, 2, 0)
-import Database.Esqueleto.Internal.Internal (Update)
-#else
-import Database.Esqueleto.Internal.Language (Update)
-#endif
-
 
 -- All DB operations run in this monad
 type DBAction a = ReaderT SqlBackend IO a
@@ -28,15 +21,16 @@ withDBConnectionPool f = runStdoutLoggingT $
     liftIO $ f pool
 
 -- An optional update operator
-(=?.) :: (PersistEntity v, PersistField typ) => EntityField v typ -> Maybe typ -> Maybe (SqlExpr (Update v))
+(=?.) :: (PersistEntity v, PersistField typ) => EntityField v typ -> Maybe typ -> Maybe (SqlExpr (Entity v) -> SqlExpr Update)
 fld =?. mv = fmap (\v -> fld =. val v) mv
 
 -- Aeson options to drop the entity name prefix from field names
-dropPrefixOptions :: Options
-dropPrefixOptions = defaultOptions
-  { fieldLabelModifier = lowerFirst . dropWhile isLower
-  }
-  where
-    lowerFirst :: String -> String
-    lowerFirst (c:cs) | isUpper c = toLower c:cs
-    lowerFirst s = s
+aesonDropPrefixOptions :: Aeson.Options
+aesonDropPrefixOptions = Aeson.defaultOptions{Aeson.fieldLabelModifier = lowerFirst . dropWhile isLower}
+
+schemaDropPrefixOptions :: OpenApi.SchemaOptions
+schemaDropPrefixOptions = OpenApi.defaultSchemaOptions{OpenApi.fieldLabelModifier = lowerFirst . dropWhile isLower}
+
+lowerFirst :: String -> String
+lowerFirst (c : cs) | isUpper c = toLower c : cs
+lowerFirst s = s
