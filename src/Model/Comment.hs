@@ -6,7 +6,7 @@ module Model.Comment (
   Model.Comment.delete,
 ) where
 
-import Data.Aeson
+import Data.Aeson (FromJSON (..), ToJSON (..), genericParseJSON, genericToJSON)
 import Data.Maybe (fromJust)
 import Data.OpenApi (ToSchema (..), genericDeclareNamedSchema)
 import Data.Time.Clock (UTCTime)

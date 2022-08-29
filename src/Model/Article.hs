@@ -19,7 +19,13 @@ module Model.Article (
 
 import Control.Exception.Safe (catch, throw)
 import Control.Lens ((?~))
-import Data.Aeson
+import Data.Aeson (
+  FromJSON (..),
+  ToJSON (..),
+  Value (Number),
+  genericParseJSON,
+  genericToJSON,
+ )
 import Data.Char (isSpace)
 import Data.Maybe (fromJust)
 import Data.OpenApi (ToSchema (..), default_, genericDeclareNamedSchema, maximum_, minimum_, paramSchemaToSchema)

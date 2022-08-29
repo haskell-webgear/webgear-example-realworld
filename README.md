@@ -4,8 +4,8 @@ A medium.com clone (called conduit) specified by https://github.com/gothinkster/
 Run with:
 
 ```shell
-stack build
-stack exec realworld
+nix develop
+cabal run
 ```
 
 This starts the app at http://localhost:3000/

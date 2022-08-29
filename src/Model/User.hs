@@ -14,7 +14,17 @@ module Model.User (
 import Control.Monad.Except (throwError)
 import qualified Crypto.Hash as Hash
 import qualified Crypto.JWT as JWT
-import Data.Aeson
+import Data.Aeson (
+  FromJSON (..),
+  Object,
+  Result (..),
+  ToJSON (..),
+  Value (..),
+  fromJSON,
+  genericParseJSON,
+  genericToJSON,
+  (.=),
+ )
 import Data.OpenApi (ToSchema (..), genericDeclareNamedSchema)
 import Database.Esqueleto.Experimental as E
 import qualified Database.Persist.Sql as DB
