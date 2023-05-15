@@ -1,4 +1,4 @@
-name: Haskell CI
+name: CI
 
 on:
   push:
@@ -17,19 +17,18 @@ jobs:
       matrix:
         os:
           - ubuntu-latest
-          - macos-latest
         ghc:
-          - 9.2.4
+          - 9.4.4
 
     steps:
       - name: Checkout Source Code
         uses: actions/checkout@v3
 
       - name: Install Nix
-        uses: cachix/install-nix-action@v17
+        uses: cachix/install-nix-action@v20
 
       - name: Set up Cachix
-        uses: cachix/cachix-action@v10
+        uses: cachix/cachix-action@v12
         with:
           name: haskell-webgear
           authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
