@@ -5,8 +5,8 @@
 }:
 mkDerivation {
   pname = "webgear-core";
-  version = "1.0.4";
-  sha256 = "875aa076ce748146c4249e5d413b700127df76f701594e214d94a2b0ed0f002a";
+  version = "1.0.5";
+  sha256 = "4c182fbdcc3d1ff56a971ecf11a7d01b27654c676e1d725a8103cb747729ded0";
   libraryHaskellDepends = [
     arrows base bytestring case-insensitive filepath http-api-data
     http-media http-types jose mime-types network safe-exceptions

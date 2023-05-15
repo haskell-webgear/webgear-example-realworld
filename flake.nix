@@ -18,7 +18,7 @@
           inherit system;
           overlays = [ haskellOverlay ];
         };
-        ghcVersion = "ghc924";
+        ghcVersion = "ghc944";
         hsPkgs = pkgs.haskell.packages.${ghcVersion};
 
         pkgName = "webgear-example-realworld";
@@ -28,11 +28,16 @@
             packages = prev.haskell.packages // {
               ${ghcVersion} = prev.haskell.packages.${ghcVersion}.override {
                 overrides = hfinal: hprev: {
-                  doctest = hfinal.callPackage ./nix/haskell-packages/doctest-0.20.0.nix {};
-                  relude = hfinal.callPackage ./nix/haskell-packages/relude-1.1.0.0.nix {};
-                  webgear-core = hfinal.callPackage ./nix/haskell-packages/webgear-core-1.0.4.nix {};
-                  webgear-server = hfinal.callPackage ./nix/haskell-packages/webgear-server-1.0.4.nix {};
-                  webgear-openapi = hfinal.callPackage ./nix/haskell-packages/webgear-openapi-1.0.4.nix {};
+                  # Broken packages and dependencies
+                  bytestring-conversion = hfinal.callPackage ./nix/haskell-packages/bytestring-conversion-0.3.2.nix {};
+                  generics-sop = hfinal.callPackage ./nix/haskell-packages/generics-sop-0.5.1.3.nix {};
+                  openapi3 = hfinal.callPackage ./nix/haskell-packages/openapi3-3.2.3.nix {};
+                  persistent = hfinal.callPackage ./nix/haskell-packages/persistent-2.14.5.0.nix {};
+                  postgresql-simple = hfinal.callPackage ./nix/haskell-packages/postgresql-simple-0.6.5.nix {};
+
+                  webgear-core = hfinal.callPackage ./nix/haskell-packages/webgear-core-1.0.5.nix {};
+                  webgear-server = hfinal.callPackage ./nix/haskell-packages/webgear-server-1.0.5.nix {};
+                  webgear-openapi = hfinal.callPackage ./nix/haskell-packages/webgear-openapi-1.0.5.nix {};
                   ${pkgName} = hfinal.callCabal2nix pkgName (gitignore.lib.gitignoreSource ./.) {};
                 };
               };

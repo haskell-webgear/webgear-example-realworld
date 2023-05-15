@@ -4,8 +4,8 @@
 }:
 mkDerivation {
   pname = "webgear-openapi";
-  version = "1.0.4";
-  sha256 = "91b800bc100444fbd13ed0084c76efc9e56940a6d560a5e005964c750ebe0f73";
+  version = "1.0.5";
+  sha256 = "7edf3d663c1aea68f896505921b65ee615552976f1e308cc93f5c22d88dbd1b3";
   libraryHaskellDepends = [
     arrows base http-media http-types insert-ordered-containers lens
     openapi3 text webgear-core
